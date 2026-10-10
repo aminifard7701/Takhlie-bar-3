@@ -3,6 +3,9 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -12,38 +15,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get project files
+      - name: Checkout project
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build web application
         run: npm run build
-
-      - name: Install Capacitor
-        run: npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
-
-      - name: Configure Android app
-        run: |
-          printf '%s\n' '{"appId":"ir.example.loadmanagement","appName":"مدیریت تخلیه بار","webDir":"dist"}' > capacitor.config.json
-
-      - name: Create Android project
-        run: npx cap add android
-
-      - name: Sync Android project
-        run: npx cap sync android
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
+
+      - name: Install Capacitor
+        run: npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
+
+      - name: Create and sync Android project
+        run: |
+          npx cap add android
+          npx cap sync android
 
       - name: Build APK
         working-directory: android
@@ -54,7 +52,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: modiriat-takhliye-bar-apk
+          name: load-management-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
