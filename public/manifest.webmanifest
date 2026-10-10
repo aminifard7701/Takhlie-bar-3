@@ -1,0 +1,12 @@
+{
+  "name": "مدیریت تخلیه بار روزانه",
+  "short_name": "تخلیه بار",
+  "description": "ثبت و مدیریت روزانه تخلیه بار نیسان، آریسان و خاور",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "icons": []
+}
