@@ -4,8 +4,13 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.json'
+      - '.github/workflows/build-apk.yml'
 
 permissions:
   contents: read
@@ -23,11 +28,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies and gallery plugin
+        run: |
+          npm ci
+          npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7 @capacitor-community/media@^8
 
-      - name: Build web application
+      - name: Build web app
         run: npm run build
+
+      - name: Add Capacitor Android support
+        run: |
+          npx cap add android
+          npx cap sync android
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -35,19 +47,9 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Install Capacitor
-        run: npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
-
-      - name: Create and sync Android project
-        run: |
-          npx cap add android
-          npx cap sync android
-
-      - name: Build APK
+      - name: Build debug APK
         working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: chmod +x gradlew && ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
