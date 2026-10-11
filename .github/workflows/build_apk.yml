@@ -4,12 +4,16 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'src/**'
+      - 'public/**'
+      - 'assets/**'
       - 'package.json'
       - 'package-lock.json'
       - 'capacitor.config.json'
+      - 'index.html'
       - '.github/workflows/build_apk.yml'
 
 permissions:
@@ -17,6 +21,7 @@ permissions:
 
 jobs:
   build-apk:
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -27,22 +32,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
 
-      
-      - name: Install app icon generator
-        run: npm install --no-save @capacitor/assets
-          npm install
-          npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7 @capacitor-community/media@^8 @capacitor/app@^7 @capacitor/status-bar@^7 @capacitor/filesystem@^7 @capacitor/share@^7
+      - name: Install project dependencies
+        run: npm install
 
-      - name: Build web app
+      - name: Install Capacitor Android plugins
+        run: |
+          npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7
+          npm install @capacitor/app@^7 @capacitor/status-bar@^7 @capacitor/filesystem@^7 @capacitor/share@^7 @capacitor-community/media@^8
+          npm install --no-save @capacitor/assets
+
+      - name: Build web application
         run: npm run build
 
-      
-      - name: Add Capacitor Android support
-        run: |
-          npx cap add android
-          npx cap sync android
-          npx capacitor-assets generate --android
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Generate Android app icons
+        run: npx capacitor-assets generate --android
+        continue-on-error: true
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -51,14 +64,14 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: load-management-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-      - 'assets/**'
-      - 'public/favicon.svg'
           if-no-files-found: error
           retention-days: 14
