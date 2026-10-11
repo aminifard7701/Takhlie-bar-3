@@ -28,19 +28,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies and native plugins
-        run: |
+      
+      - name: Install app icon generator
+        run: npm install --no-save @capacitor/assets
           npm install
           npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7 @capacitor-community/media@^8 @capacitor/app@^7 @capacitor/status-bar@^7 @capacitor/filesystem@^7 @capacitor/share@^7
 
       - name: Build web app
         run: npm run build
 
+      
       - name: Add Capacitor Android support
         run: |
           npx cap add android
           npx cap sync android
-
+          npx capacitor-assets generate --android
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -56,5 +58,7 @@ jobs:
         with:
           name: load-management-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+      - 'assets/**'
+      - 'public/favicon.svg'
           if-no-files-found: error
           retention-days: 14
