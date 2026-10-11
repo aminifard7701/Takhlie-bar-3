@@ -37,68 +37,213 @@ export function exportExcel(rows: RecordEntry[], filename: string, rates: WageRa
   save(new Blob(['\uFEFF', xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), filename + '.xls');
 }
 
-async function drawReport(rows: RecordEntry[], title: string, rates: WageRates): Promise<HTMLCanvasElement> {
+async function drawReport(
+  rows: RecordEntry[],
+  title: string,
+  rates: WageRates
+): Promise<HTMLCanvasElement> {
   await document.fonts.ready;
+
+  // نمایش سوابق از اول ماه به آخر ماه
+  const orderedRows = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+
   const canvas = document.createElement('canvas');
   canvas.width = 1200;
-  canvas.height = Math.max(1120, 690 + rows.length * 64);
+  canvas.height = Math.max(1120, 690 + orderedRows.length * 64);
+
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('canvas unavailable');
+
   const { width: w, height: h } = canvas;
-  ctx.fillStyle = '#f6f8f7'; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(44, 44, w - 88, h - 88);
-  ctx.fillStyle = '#08795b'; ctx.fillRect(44, 44, w - 88, 14);
-  ctx.direction = 'rtl'; ctx.textAlign = 'right';
-  ctx.fillStyle = '#172b2a'; ctx.font = 'bold 46px Vazirmatn, sans-serif';
-  ctx.fillText('مدیریت تخلیه بار روزانه', 1100, 145);
-  ctx.font = '30px Vazirmatn, sans-serif'; ctx.fillStyle = '#5e7370'; ctx.fillText(title, 1100, 207);
-  ctx.font = '24px Vazirmatn, sans-serif'; ctx.fillText(`تعداد روزهای ثبت‌شده: ${fa(rows.length)}`, 1100, 255);
-  const totals = sumRows(rows);
-  ctx.fillStyle = '#e8f5ef'; ctx.fillRect(85, 289, 1030, 105);
-  ctx.fillStyle = '#08795b'; ctx.font = 'bold 29px Vazirmatn, sans-serif';
-  ctx.fillText(`مجموع کل: ${fa(totals.total)} بار`, 1065, 354);
-  ctx.font = '24px Vazirmatn, sans-serif';
-  ctx.fillText(`نیسان ${fa(totals.nissan)}  |  آریسان ${fa(totals.arisan)}  |  خاور ${fa(totals.khavar)}`, 670, 354);
-  // Prominent colored wage summary card; deliberately excludes all finance/income fields.
-  const wageGradient = ctx.createLinearGradient(85, 405, 1115, 535);
-  wageGradient.addColorStop(0, '#075a50'); wageGradient.addColorStop(0.55, '#087f62'); wageGradient.addColorStop(1, '#176f91');
-  ctx.fillStyle = wageGradient;
-  ctx.beginPath(); ctx.roundRect(85, 408, 1030, 128, 20); ctx.fill();
-  // Center the report wage title and amount inside the full colored card.
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#b8f0d9'; ctx.font = 'bold 30px Vazirmatn, sans-serif';
-  ctx.fillText('جمع دستمزد کل این گزارش', 600, 449);
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 42px Vazirmatn, sans-serif';
-  ctx.fillText(`${fa(totalWages(rows, rates).toLocaleString('en-US'))} تومان`, 600, 493);
-  const rateBoxes = [{x: 110, label: 'نرخ نیسان', value: rates.nissan}, {x: 430, label: 'نرخ آریسان', value: rates.arisan}, {x: 750, label: 'نرخ خاور', value: rates.khavar}];
-  rateBoxes.forEach((item) => {
-    ctx.fillStyle = '#ffffff24'; ctx.beginPath(); ctx.roundRect(item.x, 497, 285, 29, 9); ctx.fill();
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px Vazirmatn, sans-serif';
-    ctx.textAlign = 'center'; ctx.fillText(`${item.label}: ${fa(item.value.toLocaleString('en-US'))} تومان`, item.x + 142, 518);
-  });
+
+  ctx.fillStyle = '#f6f8f7';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(44, 44, w - 88, h - 88);
+
+  ctx.fillStyle = '#08795b';
+  ctx.fillRect(44, 44, w - 88, 14);
+
+  ctx.direction = 'rtl';
   ctx.textAlign = 'right';
-  const cols = [1080, 755, 625, 495, 365];
-  // Colored rounded frame around the vehicle-count table header.
-  const tableGradient = ctx.createLinearGradient(85, 550, 1115, 608);
-  tableGradient.addColorStop(0, '#075a50'); tableGradient.addColorStop(0.55, '#087f62'); tableGradient.addColorStop(1, '#176f91');
-  ctx.fillStyle = tableGradient; ctx.beginPath(); ctx.roundRect(85, 550, 1030, 58, 12); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 24px Vazirmatn, sans-serif';
-  ['تاریخ', 'نیسان', 'آریسان', 'خاور', 'جمع'].forEach((label, i) => ctx.fillText(label, cols[i], 589));
-  ctx.font = '23px Vazirmatn, sans-serif';
-  rows.forEach((r, i) => {
-    const y = 608 + i * 64;
-    if (i % 2 === 1) { ctx.fillStyle = '#f7faf8'; ctx.fillRect(85, y, 1030, 64); }
-    ctx.fillStyle = '#314642';
-    [dateLabel(r.date), fa(r.nissan), fa(r.arisan), fa(r.khavar), fa(totalOf(r))].forEach((value, index) => ctx.fillText(value, cols[index], y + 42));
+
+  ctx.fillStyle = '#172b2a';
+  ctx.font = 'bold 46px Vazirmatn, sans-serif';
+  ctx.fillText('مدیریت تخلیه بار روزانه', 1100, 145);
+
+  ctx.font = '30px Vazirmatn, sans-serif';
+  ctx.fillStyle = '#5e7370';
+  ctx.fillText(title, 1100, 207);
+
+  ctx.font = '24px Vazirmatn, sans-serif';
+  ctx.fillText(
+    `تعداد روزهای ثبت‌شده: ${fa(orderedRows.length)}`,
+    1100,
+    255
+  );
+
+  const totals = sumRows(orderedRows);
+
+  // کادر مجموع تعداد بارها
+  ctx.fillStyle = '#e8f5ef';
+  ctx.beginPath();
+  ctx.roundRect(85, 289, 1030, 105, 16);
+  ctx.fill();
+
+  ctx.strokeStyle = '#b5dfd0';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#08795b';
+  ctx.font = 'bold 29px Vazirmatn, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(`مجموع کل: ${fa(totals.total)} بار`, 1065, 334);
+
+  ctx.font = '24px Vazirmatn, sans-serif';
+  ctx.fillText(
+    `نیسان ${fa(totals.nissan)}  |  آریسان ${fa(totals.arisan)}  |  خاور ${fa(totals.khavar)}`,
+    1065,
+    371
+  );
+
+  // کادر بالایی: عنوان و مبلغ دستمزد در یک خط
+  const wageGradient = ctx.createLinearGradient(85, 408, 1115, 468);
+  wageGradient.addColorStop(0, '#075a50');
+  wageGradient.addColorStop(0.55, '#087f62');
+  wageGradient.addColorStop(1, '#176f91');
+
+  ctx.fillStyle = wageGradient;
+  ctx.beginPath();
+  ctx.roundRect(85, 408, 1030, 60, 15);
+  ctx.fill();
+
+  ctx.strokeStyle = '#064f48';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // عنوان در سمت راست و مبلغ در همان خط
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 27px Vazirmatn, sans-serif';
+  ctx.fillText('جمع دستمزد کل این گزارش:', 1060, 446);
+
+  ctx.fillStyle = '#d5ffeb';
+  ctx.font = 'bold 30px Vazirmatn, sans-serif';
+  ctx.fillText(
+    `${fa(totalWages(orderedRows, rates).toLocaleString('en-US'))} تومان`,
+    625,
+    446
+  );
+
+  // سه کادر نرخ دستمزد؛ ترتیب از راست به چپ:
+  // نیسان، آریسان، خاور
+  const rateBoxes = [
+    { x: 795, label: 'نرخ دستمزد نیسان', value: rates.nissan },
+    { x: 440, label: 'نرخ دستمزد آریسان', value: rates.arisan },
+    { x: 85, label: 'نرخ دستمزد خاور', value: rates.khavar },
+  ];
+
+  rateBoxes.forEach((item) => {
+    const y = 478;
+    const boxWidth = 320;
+    const boxHeight = 58;
+
+    ctx.fillStyle = '#f0f8f5';
+    ctx.beginPath();
+    ctx.roundRect(item.x, y, boxWidth, boxHeight, 12);
+    ctx.fill();
+
+    ctx.strokeStyle = '#08795b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#075a50';
+    ctx.font = 'bold 19px Vazirmatn, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(item.label, item.x + boxWidth / 2, y + 23);
+
+    ctx.font = 'bold 21px Vazirmatn, sans-serif';
+    ctx.fillText(
+      `${fa(item.value.toLocaleString('en-US'))} تومان`,
+      item.x + boxWidth / 2,
+      y + 47
+    );
   });
-  // Add a colored closing total row with a clear frame.
-  const totalY = 608 + rows.length * 64;
-  ctx.fillStyle = '#e0f3eb'; ctx.fillRect(85, totalY, 1030, 60);
-  ctx.strokeStyle = '#08795b'; ctx.lineWidth = 2; ctx.strokeRect(85, totalY, 1030, 60);
-  ctx.fillStyle = '#075a50'; ctx.font = 'bold 24px Vazirmatn, sans-serif';
-  [ 'جمع کل', fa(sumRows(rows).nissan), fa(sumRows(rows).arisan), fa(sumRows(rows).khavar), fa(sumRows(rows).total) ].forEach((value, index) => ctx.fillText(value, cols[index], totalY + 39));
+
+  // سرستون‌های جدول سوابق
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'right';
+
+  const cols = [1080, 755, 625, 495, 365];
+
+  const tableGradient = ctx.createLinearGradient(85, 550, 1115, 608);
+  tableGradient.addColorStop(0, '#075a50');
+  tableGradient.addColorStop(0.55, '#087f62');
+  tableGradient.addColorStop(1, '#176f91');
+
+  ctx.fillStyle = tableGradient;
+  ctx.beginPath();
+  ctx.roundRect(85, 550, 1030, 58, 12);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 24px Vazirmatn, sans-serif';
+
+  ['تاریخ', 'نیسان', 'آریسان', 'خاور', 'جمع'].forEach((label, i) => {
+    ctx.fillText(label, cols[i], 589);
+  });
+
+  // سوابق از اول ماه در بالا تا آخر ماه در پایین
+  ctx.font = '23px Vazirmatn, sans-serif';
+
+  orderedRows.forEach((r, i) => {
+    const y = 608 + i * 64;
+
+    if (i % 2 === 1) {
+      ctx.fillStyle = '#f7faf8';
+      ctx.fillRect(85, y, 1030, 64);
+    }
+
+    ctx.fillStyle = '#314642';
+
+    [
+      dateLabel(r.date),
+      fa(r.nissan),
+      fa(r.arisan),
+      fa(r.khavar),
+      fa(totalOf(r)),
+    ].forEach((value, index) => {
+      ctx.fillText(value, cols[index], y + 42);
+    });
+  });
+
+  // ردیف پایانی مجموع کل
+  const totalY = 608 + orderedRows.length * 64;
+
+  ctx.fillStyle = '#e0f3eb';
+  ctx.fillRect(85, totalY, 1030, 60);
+
+  ctx.strokeStyle = '#08795b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(85, totalY, 1030, 60);
+
+  ctx.fillStyle = '#075a50';
+  ctx.font = 'bold 24px Vazirmatn, sans-serif';
+
+  [
+    'جمع کل',
+    fa(totals.nissan),
+    fa(totals.arisan),
+    fa(totals.khavar),
+    fa(totals.total),
+  ].forEach((value, index) => {
+    ctx.fillText(value, cols[index], totalY + 39);
+  });
+
   return canvas;
-}
+         }
 
 function makePdf(jpeg: Uint8Array, imageWidth: number, imageHeight: number): Blob {
   const encoder = new TextEncoder();
