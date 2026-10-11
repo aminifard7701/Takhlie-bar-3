@@ -123,10 +123,19 @@ function App() {
   };
   const todayRecord = records.find(r => r.date === today);
   const editing = records.some(r => r.date === formDate);
-  const filtered = useMemo(() => {
-    const q = en(search.trim());
-    return records.filter(r => !q || r.date.includes(q) || dateLabel(r.date).includes(search.trim()) || r.note.includes(search.trim()));
-  }, [records, search]);
+const filtered = useMemo(() => {
+  const q = en(search.trim());
+
+  return records
+    .filter(
+      r =>
+        !q ||
+        r.date.includes(q) ||
+        dateLabel(r.date).includes(search.trim()) ||
+        r.note.includes(search.trim())
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+}, [records, search]);
   const earliestYear = Math.max(1300, Math.min(current.year - 5, reportYear, ...records.map(r => fromKey(r.date).year)));
   const latestYear = Math.min(1500, Math.max(current.year + 2, reportYear, ...records.map(r => fromKey(r.date).year)));
   const yearOptions = Array.from({ length: latestYear - earliestYear + 1 }, (_, i) => latestYear - i);
