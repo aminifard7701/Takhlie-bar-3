@@ -10,7 +10,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'capacitor.config.json'
-      - '.github/workflows/build-apk.yml'
+      - '.github/workflows/build_apk.yml'
 
 permissions:
   contents: read
@@ -28,10 +28,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies and gallery plugin
+      - name: Install dependencies and native plugins
         run: |
-          npm ci
-          npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7 @capacitor-community/media@^8
+          npm install
+          npm install @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7 @capacitor-community/media@^8 @capacitor/app@^7 @capacitor/status-bar@^7 @capacitor/filesystem@^7 @capacitor/share@^7
 
       - name: Build web app
         run: npm run build
