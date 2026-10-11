@@ -1,6 +1,6 @@
 {
   "appId": "com.amini.fargeloadmanager",
-  "appName": "مدیریت تخلیه بار روزانه",
+  "appName": "مدیریت تخلیه بار",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
